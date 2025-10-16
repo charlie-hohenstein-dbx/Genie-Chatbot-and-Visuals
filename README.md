@@ -2,7 +2,7 @@
 
 This Streamlit application provides a chat interface to interact with a Databricks Genie space and displays a campaign reporting dashboard.
 
-## Setup
+## Setup Instructions
 
 1.  **Clone the repository:**
     ```bash
