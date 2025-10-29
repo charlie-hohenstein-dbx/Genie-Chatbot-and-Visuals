@@ -1,181 +1,174 @@
-# Agent Chat Application
+# Genie Chatbot with MCP
 
-This Streamlit application provides a chat interface to interact with a Databricks Genie space and displays a campaign reporting dashboard.
+A simple Streamlit chatbot that uses **Databricks MCP servers** to query data via Genie and generate interactive charts via Unity Catalog functions.
 
-## Setup
+---
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repository-url>
-    cd demo
-    ```
+## Quick Start
 
-2.  **Create and activate a virtual environment (recommended):**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    ```
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 2. Set Environment Variables
+Create a `.env` file:
+```bash
+DATABRICKS_HOST="https://your-workspace.cloud.databricks.com"
+DATABRICKS_TOKEN="dapi..."
+GENIE_SPACE_ID="01abc..."
+```
 
-4.  **Set up environment variables:**
-    Create a `.env` file in the `demo` project root directory with the following content:
+### 3. Deploy UC Function
+```bash
+cd uc_functions/deploy
+python create_chart_function_client.py
+```
+This creates `chat_app_demo.dev.generate_chart` in Unity Catalog.
 
-    ```
-    DATABRICKS_HOST="your_databricks_host_url" # e.g., https://e2-demo-field-eng.cloud.databricks.com/
-    DATABRICKS_TOKEN="your_databricks_api_token" # e.g., dapixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    GENIE_SPACE_ID="your_genie_space_id" # e.g., 01f031d377521b3e9ccf2572fa3e417e
-    ```
-    Replace the placeholder values with your actual Databricks host, API token, and Genie Space ID.
+### 4. Run Locally
+```bash
+cd databricks_chat_app
+streamlit run app.py
+```
 
-## Running the Application
+---
 
-1.  Ensure your virtual environment is activated and you are in the `demo` directory.
-2.  Run the Streamlit application:
-    ```bash
-    streamlit run databricks_chat_app/app.py
-    ```
+## How It Works
 
-    The application should open in your web browser.
+```
+User asks: "Show me sales by region"
+    ↓
+[Genie MCP] → Returns table data
+    ↓
+[UC Function MCP] → Generates interactive Plotly charts (bar, line, pie)
+    ↓
+Streamlit displays results
+```
 
-## Deployment to Databricks
+**MCP Servers Used:**
+- **Genie**: `{host}/api/2.0/mcp/genie/{space_id}`
+- **UC Functions**: `{host}/api/2.0/mcp/functions/chat_app_demo/dev`
 
-To deploy this application as a Databricks App:
+---
 
-1.  **Package the Application:**
-    Ensure all necessary files, including `databricks_chat_app/app.py`, `requirements.txt`, and the `.env` file (or ensure environment variables are set in the Databricks App configuration) are available.
+## Deploy to Databricks
 
-2.  **Create a New Databricks App:**
-    *   Navigate to your Databricks workspace.
-    *   Go to "Compute" -> "Apps".
-    *   Click "Create App".
-    *   Give your app a name.
-    *   **Source Code:** Choose the method to provide your code (e.g., upload a zip file of your `demo` directory, connect to a Git repository).
-    *   **Entrypoint:** Specify `databricks_chat_app/app.py` as the entrypoint or main file to run.
-    *   **Python Version:** Select a Python version compatible with your dependencies (e.g., Python 3.9 or 3.10).
-    *   **Dependencies:** Databricks will typically try to install dependencies from `requirements.txt` if it's included in your source code. You might also have an option to specify a path to this file or manually list packages.
-    *   **Environment Variables:** Configure the `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, and `GENIE_SPACE_ID` environment variables directly within the Databricks App settings. This is generally more secure than packaging the `.env` file.
+### Using Databricks Asset Bundles (DABs)
 
-3.  **Deploy and Run:**
-    *   Configure any other settings as needed (e.g., instance size).
-    *   Click "Create" or "Deploy".
-    *   Once the app is deployed, you can run it and access it via the provided URL.
+1. **Configure secrets** (replace `your-scope`):
+   ```bash
+   databricks secrets create-scope your-scope
+   databricks secrets put-secret your-scope databricks-token
+   databricks secrets put-secret your-scope genie-space-id
+   ```
 
-## Deploying to Databricks Apps using Databricks CLI
+2. **Update `databricks.yml`** - change `your-scope` to your actual scope name
 
-For a more streamlined deployment process, you can use the Databricks CLI:
+3. **Deploy**:
+   ```bash
+   databricks bundle validate
+   databricks bundle deploy -t dev
+   ```
 
-### Prerequisites
-- Install the Databricks CLI: `pip install databricks-cli`
-- Configure authentication with your Databricks workspace
+4. **Access** your app in the workspace under **Apps** → `genie-chatbot-mcp`
 
-### Step-by-Step Deployment
-
-1.  **Create the Databricks App**
-    In your Databricks workspace:
-    *   Go to "Compute" -> "Apps"
-    *   Click "Create App"
-    *   Give your app a name (e.g., `agent-chat`)
-    *   Note the app name for the CLI commands
-
-2.  **Prepare the app.yaml file**
-    Create an `app.yaml` file inside the `databricks_chat_app` directory:
-    ```yaml
-    entrypoint: streamlit run app.py --server.port $PORT --server.headless true
-    ```
-
-3.  **Sync your files to Databricks Workspace**
-    From your project root directory (`demo`):
-    ```bash
-    databricks sync . /Workspace/Users/YOUR_EMAIL@databricks.com/YOUR_APP_NAME --profile YOUR_PROFILE
-    ```
-    
-    Or with watch mode for automatic syncing:
-    ```bash
-    databricks sync --watch . /Workspace/Users/YOUR_EMAIL@databricks.com/YOUR_APP_NAME --profile YOUR_PROFILE
-    ```
-
-    **Example commands:**
-    ```bash
-    # Sync with watch mode (recommended for development)
-    databricks sync --watch . /Workspace/Users/charlie.hohenstein@databricks.com/agent-chat --profile DEFAULT
-    
-    # One-time sync
-    databricks sync . /Workspace/Users/charlie.hohenstein@databricks.com/agent-chat --profile DEFAULT
-    ```
-
-4.  **Deploy the app**
-    ```bash
-    databricks apps deploy YOUR_APP_NAME --source-code-path /Workspace/Users/YOUR_EMAIL@databricks.com/YOUR_APP_NAME/databricks_chat_app --profile YOUR_PROFILE
-    ```
-
-    **Example command:**
-    ```bash
-    databricks apps deploy agent-chat --source-code-path /Workspace/Users/charlie.hohenstein@databricks.com/agent-chat/databricks_chat_app --profile DEFAULT
-    ```
-
-### Important Notes for Databricks App Deployment
-
-1.  **Import Paths:** When deploying, the app runs from within the `databricks_chat_app` directory. The import in `app.py` should be:
-    ```python
-    from genie_logic import ask_genie_question, get_workspace_client_status
-    ```
-    (Not `from databricks_chat_app.genie_logic import ...`)
-
-2.  **Hardcoded Credentials:** If you prefer to hardcode credentials in the source code rather than using environment variables, update the values in both `app.py` and `genie_logic.py`:
-    
-    In `app.py`:
-    ```python
-    DATABRICKS_HOST = "your_databricks_host_url"
-    DATABRICKS_TOKEN = "your_databricks_api_token"
-    GENIE_SPACE_ID = "your_genie_space_id"
-    ```
-    
-    In `genie_logic.py`:
-    ```python
-    workspace_client = WorkspaceClient(
-        host="your_databricks_host_url",
-        token="your_databricks_api_token",
-        auth_type='pat'
-    )
-    ```
-
-3.  **Authentication Issues:** If you encounter "more than one authorization method configured" errors, ensure:
-    *   The `auth_type='pat'` parameter is set in the `WorkspaceClient` initialization
-    *   Remove conflicting environment variables from `app.yaml` if using hardcoded credentials
-
-4.  **File Structure:** Your deployment syncs the entire project directory. The structure will be:
-    ```
-    /Workspace/Users/YOUR_EMAIL@databricks.com/YOUR_APP_NAME/
-    ├── databricks_chat_app/
-    │   ├── app.yaml
-    │   ├── requirements.txt
-    │   ├── app.py
-    │   └── genie_logic.py
-    ├── README.md
-    └── requirements.txt (project root)
-    ```
-    
-    The `--source-code-path` points to the `databricks_chat_app` subdirectory within this synced structure.
-
-### Troubleshooting Common Issues
-
-- **"ModuleNotFoundError: No module named 'databricks_chat_app'"**: Update the import in `app.py` to use relative imports
-- **"App exited unexpectedly"**: Check the application logs in the Databricks UI for detailed error messages
-- **Authentication errors**: Verify your token is valid and has the necessary permissions for the Genie Space
+---
 
 ## Project Structure
 
 ```
-demo/
-├── .env                   # Environment variables (DO NOT COMMIT if sensitive)
-├── requirements.txt       # Python dependencies
-├── README.md              # This file
-└── databricks_chat_app/
-    ├── __init__.py        # Makes it a Python package
-    ├── app.py             # Main Streamlit application logic
-    └── genie_logic.py     # Logic for interacting with Databricks Genie
+Genie-Chatbot-and-Visuals/
+├── databricks.yml               # DABs deployment config
+├── requirements.txt             # Dependencies
+├── databricks_chat_app/
+│   ├── app.py                  # Main Streamlit app (MCP-based)
+│   ├── mcp_client.py           # MCP wrapper
+│   ├── genie_chat.py           # CLI tool
+│   └── app_old_sdk_version.py # Backup (original SDK version)
+└── uc_functions/
+    └── deploy/
+        └── create_chart_function_client.py  # Deploy UC function
 ```
+
+---
+
+## What's Different (vs Old Version)
+
+| Aspect | Old (SDK) | New (MCP) |
+|--------|-----------|-----------|
+| **Code** | 825 lines | 184 lines (78% less!) |
+| **Genie** | Direct SDK | MCP server |
+| **Charts** | Local matplotlib | UC function via MCP |
+| **Chart Type** | Static images | Interactive Plotly |
+| **Agent Ready** | ❌ | ✅ |
+| **Layout** | Chat + Dashboard | Chat only (clean & focused) |
+
+---
+
+## Key Features
+
+✅ **Ultra Simple**: 184 lines of clean, focused code  
+✅ **Agent-Ready**: Uses MCP protocol for AI frameworks  
+✅ **Interactive Charts**: Zoomable, hoverable Plotly visualizations  
+✅ **Governed**: Charts generated via Unity Catalog functions with audit trails  
+✅ **Flexible**: Easy to add more MCP servers (Vector Search, DBSQL, etc.)  
+✅ **Clean UI**: Full-width chat interface without distractions
+
+---
+
+## Troubleshooting
+
+**"No Genie tools available"**  
+→ Check your `GENIE_SPACE_ID` and workspace access
+
+**"Tool 'chat_app_demo__dev__generate_chart' not found"**  
+→ Deploy the UC function: `python uc_functions/deploy/create_chart_function_client.py`
+
+**"MCP server connection failed"**  
+→ Verify authentication: `databricks auth login --host https://your-workspace.cloud.databricks.com`
+
+---
+
+## Architecture
+
+The app uses two MCP servers that discover and call tools dynamically:
+
+```python
+# Genie MCP - natural language queries
+genie_mcp = DatabricksMCPClient(
+    server_url=f"{host}/api/2.0/mcp/genie/{genie_space_id}",
+    workspace_client=workspace_client
+)
+
+# UC Function MCP - chart generation
+chart_mcp = DatabricksMCPClient(
+    server_url=f"{host}/api/2.0/mcp/functions/chat_app_demo/dev",
+    workspace_client=workspace_client
+)
+
+# Discover and call tools
+tools = mcp_client.list_tools()
+result = mcp_client.call_tool(tool_name, parameters)
+```
+
+**Tool Naming Convention:**  
+UC function `catalog.schema.function` → MCP tool `catalog__schema__function`
+
+---
+
+## Next Steps
+
+- 🔗 Connect to additional MCP servers (Vector Search, DBSQL)
+- 🤖 Integrate with AI frameworks (LangChain, OpenAI, CrewAI)
+- 📊 Add more chart types to the UC function
+- 🚀 Deploy to production with `databricks bundle deploy -t prod`
+
+---
+
+## Documentation
+
+- **MCP Servers**: https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp
+- **Unity Catalog AI**: https://docs.unitycatalog.io/ai/client/
+- **Databricks Apps**: https://docs.databricks.com/en/dev-tools/databricks-apps/
+- **DABs**: https://docs.databricks.com/dev-tools/bundles/

@@ -5,6 +5,28 @@
 bundle:
   name: ad-tech-genie-demo
 
+resources:
+  apps:
+    genie_chatbot_app:
+      name: genie-chatbot-mcp
+      description: "Genie chatbot with MCP-based chart generation"
+      source_code_path: .
+      
+      config:
+        command:
+          - streamlit
+          - run
+          - databricks_chat_app/app.py
+          - --server.port=8080
+        
+        env:
+          - name: DATABRICKS_HOST
+            value: https://e2-demo-field-eng.cloud.databricks.com
+          - name: DATABRICKS_TOKEN
+            value: ""
+          - name: GENIE_SPACE_ID
+            value: nlknlk
+
 targets:
   dev:
     mode: development
@@ -15,5 +37,10 @@ targets:
   ## Optionally, there could be 'staging' or 'prod' targets here.
   #
   # prod:
+  #   mode: production
   #   workspace:
   #     host: https://e2-demo-field-eng.cloud.databricks.com
+  #   resources:
+  #     apps:
+  #       genie_chatbot_app:
+  #         name: genie-chatbot-mcp-prod
