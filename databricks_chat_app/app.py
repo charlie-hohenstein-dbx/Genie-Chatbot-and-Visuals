@@ -11,33 +11,33 @@ import pandas as pd
 import plotly.io as pio
 from dotenv import load_dotenv
 from databricks.sdk import WorkspaceClient
-from databricks_chat_app.langgraph_agent import LangGraphMCPAgent
+from databricks_chat_app.agent_endpoint_client import AgentEndpointClient
 
 # Load environment variables
 dotenv_path = os.path.join(PROJECT_ROOT, '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
-DATABRICKS_HOST = os.getenv("DATABRICKS_HOST")
-DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN")
-GENIE_SPACE_ID = os.getenv("GENIE_SPACE_ID")
+# Get agent endpoint name from environment
+AGENT_ENDPOINT_NAME = os.getenv("AGENT_ENDPOINT_NAME", "agents_bo_cheng_dnb_demos-agents-managed-mcp-model")
 
-# Initialize agent
+# Initialize Databricks workspace client
+# This handles both user identity (Databricks Apps) and PAT (local dev)
 try:
-    workspace_client = WorkspaceClient(
-        host=DATABRICKS_HOST,
-        token=DATABRICKS_TOKEN,
-        auth_type='pat'
+    workspace_client = WorkspaceClient()
+    
+    # Initialize agent endpoint client
+    agent = AgentEndpointClient(
+        agent_endpoint_name=AGENT_ENDPOINT_NAME,
+        workspace_client=workspace_client
     )
-    # Initialize LangGraph agent with LLM endpoint
-    # Using Claude 3.7 Sonnet which has excellent tool calling capabilities
-    agent = LangGraphMCPAgent(
-        workspace_client=workspace_client, 
-        genie_space_id=GENIE_SPACE_ID,
-        llm_endpoint="databricks-claude-3-7-sonnet"
-    )
+    
     client_initialized = True
+    print(f"✅ Connected to agent endpoint: {AGENT_ENDPOINT_NAME}")
+    
 except Exception as e:
-    print(f"Error initializing agent: {e}")
+    print(f"❌ Error initializing agent client: {e}")
+    import traceback
+    traceback.print_exc()
     client_initialized = False
     agent = None
 
@@ -196,12 +196,12 @@ st.markdown("""
 # Header
 st.markdown('''
 <div class="main-header-wrapper">
-    <h1>Genie Chat with MCP</h1>
+    <h1>Chat with your Agent</h1>
 </div>
 ''', unsafe_allow_html=True)
 
 if not client_initialized:
-    st.error("Agent initialization failed. Check your environment variables and model serving endpoint access.")
+    st.error("Agent endpoint client initialization failed. Check your environment variables and ensure the agent endpoint is deployed.")
 else:
     # Initialize session state
     if "messages" not in st.session_state:
@@ -274,9 +274,9 @@ else:
         
         with st.chat_message("assistant"):
             thinking_placeholder = st.empty()
-            thinking_placeholder.markdown("🤖 LangGraph agent is thinking...")
+            thinking_placeholder.markdown("🤖 Agent endpoint is processing...")
             
-            # Call agent
+            # Call agent endpoint
             agent_response = agent.chat(prompt)
             
             if agent_response.get("error"):
@@ -286,38 +286,9 @@ else:
             else:
                 response_text = agent_response.get("response", "Agent processed your request")
                 
-                # Extract table data and charts from messages
-                table_data = None
-                charts = []
-                
-                # Look through all messages for tool results
-                for msg in agent_response.get("messages", []):
-                    if hasattr(msg, 'content') and isinstance(msg.content, str):
-                        # Try to parse message content as JSON
-                        try:
-                            result_data = json.loads(msg.content)
-                            
-                            # Check if this is table data from Genie
-                            if isinstance(result_data, dict) and "columns" in result_data and "data" in result_data:
-                                table_data = result_data
-                            
-                            # Check if this is a Databricks UC function result (has rows/columns wrapper)
-                            if isinstance(result_data, dict) and "rows" in result_data and "columns" in result_data:
-                                # Extract the actual result from rows[0][0]
-                                if result_data["rows"] and result_data["rows"][0]:
-                                    chart_json_str = result_data["rows"][0][0]
-                                    # Parse the nested JSON string
-                                    chart_data = json.loads(chart_json_str)
-                                    # Check if this is chart data
-                                    if isinstance(chart_data, dict) and "plotly_json" in chart_data:
-                                        charts.append(chart_data)
-                            
-                            # Check if this is a chart from UC function (direct format)
-                            elif isinstance(result_data, dict) and "plotly_json" in result_data:
-                                charts.append(result_data)
-                        except Exception as e:
-                            print(f"[DEBUG] Error parsing message: {e}")
-                            pass
+                # Use already-parsed data from agent endpoint client
+                table_data = agent_response.get("table_data")
+                charts = agent_response.get("charts") or []
             
             thinking_placeholder.empty()
             
