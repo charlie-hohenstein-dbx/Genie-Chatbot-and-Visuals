@@ -25,7 +25,9 @@ resources:
           - name: DATABRICKS_TOKEN
             value: ""
           - name: GENIE_SPACE_ID
-            value: nlknlk
+            value: ""
+          - name: AGENT_ENDPOINT_NAME
+            value: ""
 
 targets:
   dev:
