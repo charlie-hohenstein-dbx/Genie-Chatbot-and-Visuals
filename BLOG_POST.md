@@ -668,11 +668,10 @@ LangGraph tracks the full conversation history:
 - **Unity Catalog Functions**: AI-callable data transformations
 - **Databricks Model Serving**: Hosted LLM (Claude 3.7 Sonnet)
 - **LangGraph**: Stateful agent orchestration
-- **Streamlit**: Chat UI
+- **Databricks Apps**: Chat UI
 
 ### Performance Characteristics
 
-- **Latency**: 3-5 seconds for simple queries (network + LLM + query execution)
 - **Scalability**: Leverages Databricks serverless compute
 - **Cost**: Pay-per-token for model serving + query compute
 
@@ -687,16 +686,8 @@ Extend `genie_to_chart` to support:
 - Heatmaps
 - Multi-series line charts
 
-### 2. **Implement Streaming**
+### 2. **Add Memory/Checkpointing**
 
-Use LangGraph's `.stream()` for real-time updates:
-
-```python
-for chunk in agent.stream(initial_state):
-    st.write(chunk)  # Show agent's thinking process
-```
-
-### 3. **Add Memory/Checkpointing**
 
 Enable the agent to remember past conversations:
 
@@ -706,32 +697,11 @@ from langgraph.checkpoint.memory import MemorySaver
 checkpointer = MemorySaver()
 workflow.compile(checkpointer=checkpointer)
 ```
-
-### 4. **Human-in-the-Loop**
-
-Add approval steps for destructive operations:
-
-```python
-workflow.add_node("human_approval", ask_for_approval)
-workflow.add_conditional_edges("tools", needs_approval, {
-    "yes": "human_approval",
-    "no": "agent"
-})
-```
-
-### 5. **Deploy to Databricks Apps**
-
-Use Databricks Asset Bundles for production deployment:
-
-```bash
-databricks bundle deploy
-```
-
 ---
 
 ## Conclusion
 
-Building intelligent agents is no longer just an experiment—it's becoming production reality. By combining:
+Building intelligent agents is no longer just an experiment, it's becoming by combining:
 
 - **Databricks MCP** for secure, governed data access
 - **Unity Catalog Functions** for reusable, AI-callable tools
