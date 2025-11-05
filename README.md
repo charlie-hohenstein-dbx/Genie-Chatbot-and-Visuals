@@ -1,6 +1,6 @@
 # Genie Chatbot with MCP
 
-A simple Streamlit chatbot that uses **Databricks MCP servers** to query data via Genie and generate interactive charts via Unity Catalog functions.
+A Streamlit chatbot that uses **Databricks MCP servers** to query data via Genie and generate interactive charts via Unity Catalog functions.
 
 ---
 
@@ -93,30 +93,6 @@ Genie-Chatbot-and-Visuals/
 
 ---
 
-## What's Different (vs Old Version)
-
-| Aspect | Old (SDK) | New (MCP) |
-|--------|-----------|-----------|
-| **Code** | 825 lines | 184 lines (78% less!) |
-| **Genie** | Direct SDK | MCP server |
-| **Charts** | Local matplotlib | UC function via MCP |
-| **Chart Type** | Static images | Interactive Plotly |
-| **Agent Ready** | ❌ | ✅ |
-| **Layout** | Chat + Dashboard | Chat only (clean & focused) |
-
----
-
-## Key Features
-
-✅ **Ultra Simple**: 184 lines of clean, focused code  
-✅ **Agent-Ready**: Uses MCP protocol for AI frameworks  
-✅ **Interactive Charts**: Zoomable, hoverable Plotly visualizations  
-✅ **Governed**: Charts generated via Unity Catalog functions with audit trails  
-✅ **Flexible**: Easy to add more MCP servers (Vector Search, DBSQL, etc.)  
-✅ **Clean UI**: Full-width chat interface without distractions
-
----
-
 ## Troubleshooting
 
 **"No Genie tools available"**  
@@ -154,15 +130,6 @@ result = mcp_client.call_tool(tool_name, parameters)
 
 **Tool Naming Convention:**  
 UC function `catalog.schema.function` → MCP tool `catalog__schema__function`
-
----
-
-## Next Steps
-
-- 🔗 Connect to additional MCP servers (Vector Search, DBSQL)
-- 🤖 Integrate with AI frameworks (LangChain, OpenAI, CrewAI)
-- 📊 Add more chart types to the UC function
-- 🚀 Deploy to production with `databricks bundle deploy -t prod`
 
 ---
 
